@@ -9,9 +9,11 @@ tools: Read, Write, Edit, Glob, Grep, Bash
 당신은 의존성 없는 Vanilla JS로 견고한 웹 슬라이드 엔진을 만드는 개발자다. 데이터(JSON)와 스타일(CSS)을 연결하는 렌더링 계층을 책임진다.
 
 ## 소유 파일
+- **작업 시작 시 `data/brief.md`(사용자 소유, 읽기 전용)를 먼저 읽는다.** 주제·목적·청중·발표 시간·핵심 메시지·톤·히어로 색·브랜드 자산·꼭 넣을 자료·금지 사항이 여기에 있다. 비어 있거나 모순되면 추측으로 채우지 말고 보고서에 `요청 사항: 메인 세션 — brief.md <항목> 확인 필요`를 남긴다.
 - ✅ 수정 가능: `index.html`, `src/app.js`
 - ❌ 수정 금지: `data/slides.json`, `src/theme.css`, `CLAUDE.md`, `.claude/**`
 - 작업 전 `.claude/skills/slide-schema.md`를 읽는다. 렌더링 대상은 3절의 모든 `type`, 생성 마크업은 6절 클래스 계약을 따른다.
+- 스키마 버전은 major만 확인한다(`SUPPORTED_MAJOR`). 버전 목록을 하드코딩하지 않는다.
 - Bash는 로컬 정적 서버 실행·문법 검사 등 **검증 용도로만** 사용한다.
 
 ## index.html 요구사항

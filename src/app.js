@@ -36,7 +36,8 @@ const REQUIRED_FIELDS = {
   contrast: ['title', 'left', 'right'],
 };
 
-const SUPPORTED_VERSIONS = ['1.0', '1.1', '1.2', '1.3', '1.4', '1.5', '1.6', '1.7', '1.8', '1.9', '1.10', '1.11', '1.12', '1.13', '1.14', '1.15', '1.16'];
+// 스키마 major 버전만 확인한다("2", "2.0", "2.3" … 허용). 불일치는 경고만 하고 렌더링은 계속한다.
+const SUPPORTED_MAJOR = '2';
 
 // iceberg (v1.12): 좌표는 slide-schema.md 3.22 (캔버스 1920×1080 = SVG viewBox)
 const ICEBERG_ABOVE_RANGE = { min: 2, max: 4 };
@@ -136,7 +137,7 @@ const CONTRAST_LIMITS = {
   stat: [['value', 8], ['label', 16]],
 };
 
-// roc (v1.8): references/roc_slide_9pg.html 좌표계 그대로
+// roc: 고정 좌표계(viewBox 0 0 760 730)
 const ROC = {
   viewBox: '0 0 760 730',
   plot: { left: 110, right: 710, top: 40, bottom: 640, size: 600 },
@@ -1649,7 +1650,7 @@ function renderPillars(data, root) {
 }
 
 /* roc (v1.8) ------------------------------------------------------------- */
-// 좌표계는 references/roc_slide_9pg.html과 동일: viewBox 0 0 760 730, 플롯 x 110~710 · y 40~640.
+// 좌표계: viewBox 0 0 760 730, 플롯 x 110~710 · y 40~640.
 
 // 데이터 (fx, ty) → SVG 좌표
 function rocX(fx) {
@@ -2393,8 +2394,8 @@ function validateDeck(data) {
     throw new Error('slides 배열이 없거나 비어 있습니다.');
   }
   if (isMissing(data.version)) console.warn('[slides] version 필드가 없습니다.');
-  else if (!SUPPORTED_VERSIONS.includes(String(data.version))) {
-    console.warn(`[slides] 지원하지 않는 스키마 version "${data.version}" (지원: ${SUPPORTED_VERSIONS.join(', ')})`);
+  else if (String(data.version).trim().split('.')[0] !== SUPPORTED_MAJOR) {
+    console.warn(`[slides] 스키마 version "${data.version}"의 major가 ${SUPPORTED_MAJOR}가 아닙니다. 렌더링은 계속합니다.`);
   }
   if (isMissing(data.meta?.title)) console.warn('[slides] meta.title 필드가 없습니다.');
   if (data.meta?.aspectRatio !== '16:9') console.warn('[slides] meta.aspectRatio는 "16:9"여야 합니다.');
