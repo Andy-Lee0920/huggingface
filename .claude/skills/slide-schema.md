@@ -3,14 +3,15 @@ name: slide-schema
 description: data/slides.json 작성 규격 표준. 슬라이드 데이터를 작성·검증하거나, 이를 렌더링/스타일링할 때 반드시 참조한다.
 ---
 
-# Slide Schema 표준 (v2.0)
+# Slide Schema 표준 (v2.1)
 
-> 변경 이력 — 2.0: 범용 템플릿화 (주제 중립 예시, 장별 id 스타일 금지, major 버전 검사). 1.x 데이터 구조와 필드는 그대로 호환되며 `version`만 `"2.0"`으로 올린다.
+> 변경 이력 — 2.1: 공통 필드 `unverified`(출처 확인 전 수치)와 "확인 필요" 배지, 스토리보드 대조 규칙. · 2.0: 범용 템플릿화 (주제 중립 예시, 장별 id 스타일 금지, major 버전 검사). 2.0 데이터는 그대로 호환된다.
 
 `data/slides.json`의 구조를 정의하는 **에이전트 간 계약 문서**다.
 - planner는 이 규격대로 데이터를 작성한다.
 - developer는 이 규격의 모든 `type`을 렌더링한다.
 - designer는 "CSS 클래스 계약"에 정의된 클래스를 스타일링한다.
+- 장 순서·id·제목은 `data/storyboard.md`(storyteller 작성, 규격 `.claude/skills/storyboard-format.md`)가 정한다. planner는 이를 **보존**하고 type과 분량만 정한다. 덱 끝 `references` 장과 `<storyboard id>-2` 형식의 분할 장만 추가할 수 있다.
 - 발표의 주제·청중·히어로 색 등 입력은 `data/brief.md`(사용자 소유)에 있다. 색은 **brief.md → designer → theme.css** 경로로만 흐르며 slides.json에는 색 필드를 두지 않는다.
 
 이 문서의 변경은 사용자 승인 후에만 가능하며, 변경 시 `version`을 올린다. 뷰어(app.js)는 major 버전(`"2"`)만 확인하고, 다르면 콘솔 경고 후 렌더링을 계속한다.
@@ -25,7 +26,7 @@ description: data/slides.json 작성 규격 표준. 슬라이드 데이터를 �
 
 ```json
 {
-  "version": "2.0",
+  "version": "2.1",
   "meta": {
     "title": "발표 제목",
     "author": "발표자",
@@ -40,7 +41,7 @@ description: data/slides.json 작성 규격 표준. 슬라이드 데이터를 �
 
 | 필드 | 타입 | 필수 | 설명 |
 |---|---|---|---|
-| `version` | string | ✅ | 스키마 버전. 현재 `"2.0"` (major `2`면 허용) |
+| `version` | string | ✅ | 스키마 버전. 현재 `"2.1"` (major `2`면 허용) |
 | `meta.title` | string | ✅ | 발표 제목 (브라우저 `<title>`에도 사용) |
 | `meta.author` | string | ⬜ | 발표자 |
 | `meta.date` | string | ⬜ | `YYYY-MM-DD` |
@@ -61,6 +62,7 @@ description: data/slides.json 작성 규격 표준. 슬라이드 데이터를 �
 | `kicker` | string | ⬜ | 제목 위 작은 머리글(섹션명 등). 예: `"02 · 해결안"`. cover·quote 제외 모든 타입 |
 | `step` | integer | ⬜ | `meta.steps` 기준 현재 단계(1부터). 지정하면 캔버스 상단 안전 영역 안에 단계 진행 표시줄(`.stepbar`)을 그리고 해당 단계를 강조한다. `0`이면 표시줄을 그리되 강조 없음(개요용). 생략하면 표시줄 없음. cover·section·closing·quote 제외 |
 | `background` | object | ⬜ | 배경 사진. `{ "src", "alt", "credit", "focus", "overlay": "dark"(기본) \| "light" }`. 캔버스 전체를 사진이 채우고(안전 영역 예외) 위에 가독성 막을 깐 뒤 콘텐츠를 올린다. `dark`면 밝은 글자. **허용 타입: `stats`, `big-number`, `quote`, `cards`, `process`, `bullets`, `pillars`**. 자체 이미지가 있는 타입(`split`·`band`·`cover`·`image`)과 표(`comparison`)·`matrix`·`chart`에는 쓰지 않는다 |
+| `unverified` | string[] | ⬜ | **출처가 확인되지 않은 수치** 목록(2.1). 화면에 쓴 표기 그대로 적는다(예: `["주 2시간", "30% 절감"]`). 있으면 뷰어가 캔버스 오른쪽 위에 "확인 필요 N" 배지를 그린다. 초안에서는 출처 없는 수치를 쓸 수 있지만 **반드시 여기에 올린다**. searcher가 확인하면 `source`로 옮기고 항목을 지운다(0개가 되면 필드 삭제). brief.md "꼭 넣을 자료/수치"에 사용자가 준 값과 research.md 사실은 확인된 것으로 본다 |
 | `source` | string | ⬜ | 하단 출처 각주 한 줄. 예: `"출처: 통계청(2026.1), 회사 IR(2026.2)"`. 상세 URL은 Appendix에 둔다 |
 
 ## 3. 레이아웃 타입
@@ -73,7 +75,7 @@ description: data/slides.json 작성 규격 표준. 슬라이드 데이터를 �
   "image": { "src": "assets/images/cover-hero.jpg", "alt": "이미지 설명", "credit": "Photo: Jane Doe / Unsplash", "focus": "right" },
   "imageStyle": "full", "overlay": "dark" }
 ```
-필수: `title` / 선택: `subtitle`, `presenter`, `image`, `imageStyle`, `overlay`, `logo`(`{ "src": "assets/images/…", "alt": "…" }` 또는 최대 2개 배열 `[ {로고1}, {로고2} ]`. 표지 왼쪽 위 안전 영역 안 작은 로고. 클래스 `.cover__logo`(img). 배열이면 `.cover__logos`(div, `data-count`) 안에 순서대로 `img.cover__logo`를 두고 사이 구분선은 CSS로. **brief.md "사용 가능한 브랜드 자산"에 사용자가 제공한 파일만** 쓴다)
+필수: `title` / 선택: `subtitle`, `presenter`, `image`, `imageStyle`, `overlay`, `logo`(`{ "src": "assets/images/…", "alt": "…" }` 또는 최대 2개 배열 `[ {로고1}, {로고2} ]`. 표지 왼쪽 위 안전 영역 안 작은 로고. 클래스 `.cover__logo`(img). 배열이면 `.cover__logos`(div, `data-count`) 안에 순서대로 `img.cover__logo`를 두고 사이 구분선은 CSS로. **사용자가 `assets/images/brand/`에 직접 넣은 파일만** 쓴다)
 
 | 필드 | 값 | 설명 |
 |---|---|---|
@@ -538,6 +540,7 @@ developer는 아래 구조로 마크업을 생성하고, designer는 이 클래�
 | `.slide__iceberg`(`data-above-count`, `data-below-count`), `svg.iceberg__art`, `.iceberg__sea`, `.iceberg__waterline`, `.iceberg__facet`(`data-part="above|below"`, `data-shade="1~5"`), `.iceberg__link`(`line`), `.iceberg__dot`(`circle`, `data-size="s|m"`), `.iceberg__above`(`ul`), `.iceberg__item`(`data-pos`, `data-slot`, `data-tone`), `.iceberg__heading`, `.iceberg__text`, `.iceberg__example`, `.iceberg__below`(`ul`), `.iceberg__node`(`data-pos`), `.iceberg__node-heading`, `.iceberg__node-text`, `.iceberg__footer`, `.iceberg__flow`(`p`) > `.iceberg__flow-step` + `.iceberg__flow-arrow`, `.iceberg__message` | iceberg. DOM: stepbar → kicker → title → subtitle → `.slide__iceberg`(svg → above → below) → `.iceberg__footer`(flow → message) → source. `svg.iceberg__art`는 viewBox `0 0 1920 1080`, 캔버스 전체(0,0)에 깔리는 장식층(`aria-hidden`). 그라데이션은 `<defs>` 안 `stop.iceberg__stop`에 `data-stop` 속성만 두고 색은 CSS `stop-color`로. 라벨·노드는 3.22 좌표에 맞춰 designer가 absolute 배치 |
 | `.interview__media`, `.interview__image`(`data-focus`), `.slide__credit`, `.interview__body`, `.interview__quote`(`blockquote`), `.interview__interviewee`, `.interview__insights`(`ul`, `data-count`), `.interview__insight`, `.interview__insight-heading`, `.interview__insight-text`, `.interview__implication` | interview. DOM: `.interview__media`(img·credit) → stepbar → `.interview__body`(kicker → title → quote → interviewee → insights → implication → source). 인라인 색 금지 |
 | `.slide__contrast`, `.contrast__side`(`data-side="left|right"`, 사진이 있으면 `data-has-image`), `.contrast__label`, `.contrast__headline`, `.contrast__lines`(`ul`), `.contrast__line`, `.contrast__stats`(`ul`, `data-count`), `.contrast__stat`, `.contrast__stat-value`, `.contrast__stat-label`, `.contrast__media`(`data-count`) > `img.contrast__image`(`data-focus`, `data-fit="cover|contain"`) | contrast. DOM: stepbar → kicker → title → `.slide__contrast`(left side → right side; 각 side: label → headline → lines → stats → media) → source. 인라인 색 금지 |
+| `.slide__unverified`(`aside`, `data-count`, `title`·`aria-label` = 항목 목록), `.slide[data-unverified="N"]` | 확인 필요 배지(2.1). `.slide`의 마지막 자식. 캔버스 오른쪽 위 모서리(안전 영역 바깥)에 둔다. 인쇄에도 표시 |
 | `.progress`, `.page-number` | 진행 표시줄 / 페이지 번호 |
 | `.progress__bar` | 진행 표시줄 내부 채움 막대 (JS가 `width`를 % 로 설정) |
 | `.nav`, `.nav__button`, `.nav__button--prev`, `.nav__button--next` | 하단 화살표 내비게이션 (`<button>`, 캔버스 밖 `.deck` 위에 고정). 첫/마지막 슬라이드에서 `disabled` 속성 부여 |
@@ -552,7 +555,9 @@ developer는 아래 구조로 마크업을 생성하고, designer는 이 클래�
 
 ## 7. 검증 체크리스트
 
-- [ ] `node scripts/validate-slides.mjs` 통과 (아래 항목을 자동 검사)
+- [ ] `npm run check` 통과 (validate-storyboard · validate-slides · id 선택자 · 문법 · 캡처 · PDF)
+- [ ] storyboard.md의 순서·id·제목이 slides.json에 그대로 있음
+- [ ] 출처 없는 수치는 모두 `unverified`에 있음 (발표 전에는 0개 목표 — `/research`)
 - [ ] 유효한 JSON이며 `version`(major 2), `meta.title`, `meta.aspectRatio: "16:9"`, `slides`가 존재
 - [ ] 모든 슬라이드에 고유한 `id`와 정의된 `type`이 있음
 - [ ] 타입별 필수 필드 누락 없음

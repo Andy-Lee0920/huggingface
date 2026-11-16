@@ -1,13 +1,18 @@
 #!/usr/bin/env node
-// data/slides.json 검사기 — .claude/skills/slide-schema.md v2.0 기준 (Node 표준 라이브러리만 사용)
-// 사용: node scripts/validate-slides.mjs [경로]   (기본: data/slides.json)
+// data/slides.json 검사기 — .claude/skills/slide-schema.md v2.1 기준 (Node 표준 라이브러리만 사용)
+// 사용: node scripts/validate-slides.mjs [경로] [--json] [--no-storyboard]   (기본: data/slides.json)
+//   data/storyboard.md가 있으면 장 순서·id·제목 보존을 대조한다(--no-storyboard로 끔).
 // 종료 코드: 0 = 통과, 1 = 오류 있음. 경고(⚠)는 통과를 막지 않는다.
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseStoryboard } from './lib/storyboard.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const file = resolve(process.argv[2] || resolve(root, 'data/slides.json'));
+const args = process.argv.slice(2);
+const asJson = args.includes('--json');
+const useStoryboard = !args.includes('--no-storyboard');
+const file = resolve(args.find((a) => !a.startsWith('--')) || resolve(root, 'data/slides.json'));
 const errors = [];
 const warnings = [];
 const err = (where, msg) => errors.push(`${where}: ${msg}`);
@@ -315,6 +320,8 @@ function bulletsList(list, w, maxItems, maxLen) {
 // ---------- 공통 ----------
 const NO_KICKER = ['cover', 'quote'];
 const NO_STEP = ['cover', 'section', 'closing', 'quote'];
+const DATA_TYPES = ['chart', 'stats', 'big-number', 'data-panels', 'roc'];
+const unverified = [];
 const BG_OK = ['stats', 'big-number', 'quote', 'cards', 'process', 'bullets', 'pillars'];
 const SOURCE_LONG = ['roc', 'data-panels'];
 const TITLE_LONG = ['roc'];
@@ -363,14 +370,51 @@ const ids = new Set();
     image(s.background, `${w}.background`);
   }
   walkStrings(s, '', (v, p) => { if (/<\/?[a-z][^>]*>/i.test(v)) err(`${w}.${p}`, 'HTML 태그 금지'); });
+  // unverified (2.1): 출처 확인 전 수치 목록
+  if (s.unverified !== undefined) {
+    if (!isArr(s.unverified) || !s.unverified.every(isStr)) err(w, 'unverified는 비어 있지 않은 string[]');
+    else if (!s.unverified.length) warn(w, 'unverified가 빈 배열 — 필드를 지운다');
+    else s.unverified.forEach((u) => unverified.push({ slide: i + 1, id: s.id, value: u }));
+  }
+  if (DATA_TYPES.includes(s.type) && !isStr(s.source) && !(isArr(s.unverified) && s.unverified.length)) {
+    warn(w, `${s.type}에 source도 unverified도 없음 — 수치 출처를 source에 쓰거나 unverified에 올린다`);
+  }
   T[s.type](s, w);
 });
 
+// storyboard 대조: 순서·id·제목 보존 (planner는 type·분량만 바꾼다)
+let storyboard = null;
+const sbPath = resolve(root, 'data/storyboard.md');
+if (useStoryboard && existsSync(sbPath) && isArr(data.slides)) {
+  storyboard = parseStoryboard(sbPath);
+  const slides = data.slides.filter(isObj);
+  const byId = new Map(slides.map((s, i) => [s.id, { s, i }]));
+  let lastIndex = -1;
+  for (const b of storyboard.slides) {
+    const hit = byId.get(b.id);
+    const w = `storyboard ${String(b.no).padStart(2, '0')} (${b.id})`;
+    if (!hit) { err(w, 'slides.json에 같은 id의 장이 없음'); continue; }
+    if (hit.i < lastIndex) err(w, '스토리보드 순서와 다름');
+    lastIndex = Math.max(lastIndex, hit.i);
+    if ((hit.s.title ?? '') !== b.title) err(w, `제목이 바뀜: "${b.title}" → "${hit.s.title ?? ''}"`);
+  }
+  const sbIds = new Set(storyboard.slides.map((b) => b.id));
+  slides.forEach((s, i) => {
+    if (sbIds.has(s.id) || s.type === 'references') return;
+    const base = [...sbIds].find((id) => new RegExp(`^${id}-\\d+$`).test(s.id || ''));
+    if (!base) err(`슬라이드 ${i + 1} (${s.id})`, '스토리보드에 없는 장 — references 또는 "<스토리보드 id>-2" 형식의 분할 장만 추가할 수 있음');
+  });
+}
+
 const rel = file.startsWith(root) ? file.slice(root.length + 1) : file;
+if (asJson) {
+  console.log(JSON.stringify({ ok: errors.length === 0, slides: data.slides?.length || 0, unverified, storyboardChecked: !!storyboard, errors, warnings }));
+  process.exit(errors.length ? 1 : 0);
+}
 for (const m of warnings) console.log(`⚠ ${m}`);
 if (errors.length) {
   for (const m of errors) console.log(`✖ ${m}`);
   console.log(`\n${rel}: 오류 ${errors.length}건, 경고 ${warnings.length}건 — 실패`);
   process.exit(1);
 }
-console.log(`✔ ${rel}: 슬라이드 ${data.slides.length}장 — 스키마 v2.0 통과 (경고 ${warnings.length}건)`);
+console.log(`✔ ${rel}: 슬라이드 ${data.slides.length}장 — 스키마 v2.1 통과 (확인 필요 수치 ${unverified.length}개${storyboard ? ', 스토리보드 순서·제목 일치' : ''}, 경고 ${warnings.length}건)`);

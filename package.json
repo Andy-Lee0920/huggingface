@@ -1,0 +1,19 @@
+{
+  "name": "web-slide-deck-template",
+  "version": "2.1.0",
+  "private": true,
+  "description": "에이전트 기반 웹 슬라이드 덱 템플릿 — 검증 도구",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "capture": "node scripts/capture.mjs",
+    "pdf": "node scripts/export-pdf.mjs",
+    "validate": "node scripts/validate-storyboard.mjs && node scripts/validate-slides.mjs",
+    "serve": "python -m http.server 8000",
+    "postinstall": "playwright install chromium"
+  },
+  "devDependencies": {
+    "playwright": "1.64.1"
+  }
+}

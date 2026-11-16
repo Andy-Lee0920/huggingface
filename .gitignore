@@ -2,4 +2,5 @@ Thumbs.db
 .DS_Store
 Desktop.ini
 node_modules/
+output/
 .claude/settings.local.json

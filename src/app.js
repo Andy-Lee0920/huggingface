@@ -2373,6 +2373,33 @@ function insertBackground(data, root) {
   root.prepend(backgroundEl(image, data.id, root));
 }
 
+// unverified (스키마 2.1): 출처 확인 전 수치 목록 → 캔버스 오른쪽 위 "확인 필요 N" 배지.
+// 목록은 title(툴팁)·aria-label 속성으로만 노출한다(innerHTML 미사용).
+function normalizeUnverified(slide, label) {
+  if (slide.unverified == null) return [];
+  if (!Array.isArray(slide.unverified)) {
+    console.warn(`[slides] ${label}: unverified는 string[]이어야 합니다 — 무시합니다.`);
+    return [];
+  }
+  const items = slide.unverified.filter((v) => typeof v === 'string' && v.trim()).map((v) => v.trim());
+  if (items.length !== slide.unverified.length) {
+    console.warn(`[slides] ${label}: unverified의 빈 값·비문자열 항목을 무시합니다.`);
+  }
+  return items;
+}
+
+function insertUnverified(data, root) {
+  const items = data.unverifiedItems;
+  if (!items || !items.length) return;
+  const badge = el('aside', 'slide__unverified');
+  badge.textContent = `확인 필요 ${items.length}`;
+  badge.dataset.count = String(items.length);
+  badge.title = `출처 확인 필요: ${items.join(' · ')}`;
+  badge.setAttribute('aria-label', badge.title);
+  root.dataset.unverified = String(items.length);
+  root.appendChild(badge);
+}
+
 function appendSource(data, root) {
   if (NO_COMMON_SOURCE_TYPES.includes(data.renderType) || isMissing(data.source)) return;
   const selector = SOURCE_CONTAINER[data.renderType];
@@ -3232,6 +3259,7 @@ function normalizeSlide(raw, index, used, steps = []) {
   if (slide.type !== 'quote') warnTextLimits(slide, `${label} (${slide.id})`, commonTextLimits(slide.type));
   validateStep(slide, `${label} (${slide.id})`, steps);
   slide.bgImage = normalizeBackground(slide, `${label} (${slide.id})`);
+  slide.unverifiedItems = normalizeUnverified(slide, `${label} (${slide.id})`);
 
   if (slide.theme != null && !THEMES.includes(slide.theme)) {
     console.warn(`[slides] ${label} (${slide.id}): 알 수 없는 theme "${slide.theme}" — light 사용`);
@@ -3257,6 +3285,7 @@ function createSlideElement(data, index, total) {
   insertStepbar(data, section, state.steps);
   insertBackground(data, section);
   appendSource(data, section);
+  insertUnverified(data, section);
   return section;
 }
 
