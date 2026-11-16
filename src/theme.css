@@ -8237,3 +8237,45 @@ svg.iceberg__art {
     --rise-base: 140px;
   }
 }
+
+/* ==========================================================================
+   23. 확인 필요 배지 (.slide__unverified, 스키마 2.1 공통 필드 unverified)
+   초안 단계에서 출처 확인 전 수치가 있는 장 오른쪽 위(안전 영역 바깥 모서리)에 작은 알약.
+   글자 = 바탕색, 면 = 경고색: light #8a5a00 위 5.4:1 · dark/accent는 밝은 경고색 위 어두운 바탕색.
+   인쇄에도 남긴다(초안 PDF 검토용). 발표 전에는 /research로 0건을 만든다.
+   ========================================================================== */
+.slide__unverified {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px 6px 12px;
+  border-radius: 999px;
+  background: var(--color-warn, #8a5a00);
+  color: var(--color-bg);
+  font-family: var(--font-body);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  pointer-events: auto;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.slide__unverified::before {
+  content: "!";
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  color: var(--color-warn, #8a5a00);
+  font-size: 15px;
+  font-weight: 800;
+}

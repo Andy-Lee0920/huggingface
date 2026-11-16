@@ -1,40 +1,19 @@
 ---
-description: 새 주제로 웹 슬라이드 덱을 만든다 — brief.md 확인 후 searcher → planner → designer → developer → designer → animator → 검수 순으로 위임
-argument-hint: <주제>
+description: data/brief.md 하나로 초안 덱을 만든다 — /storyboard → /build-deck (+ --research, --motion). 질문 없이 끝까지 실행.
+argument-hint: [--research] [--motion]
 ---
 
-# /new-deck — 새 덱 제작 파이프라인
+# /new-deck
 
-주제: **$ARGUMENTS**
+인자: `$ARGUMENTS` — 인식하는 값은 `--research`, `--motion`뿐이다. 그 밖의 텍스트는 무시하고 자동 결정 표에 "인자 무시: <텍스트> (입력은 brief.md)"로 남긴다.
 
-당신은 메인 세션(오케스트레이터)이다. `CLAUDE.md`의 역할 분리 규칙을 지키며, 아래 단계를 순서대로 진행한다. 소유 파일은 직접 고치지 않고 해당 서브에이전트에 위임한다(예외: 0단계의 `data/brief.md` 작성).
+`CLAUDE.md` 4절 **자동 실행 프로토콜**을 따른다. 사용자에게 질문하지 않는다. brief가 비어 있어도 묻지 않는다 — 주제가 없으면 /storyboard 단계가 `ok: false`로 끝난다.
 
-## 0. 브리프 확인 (메인 세션)
-1. `data/brief.md`를 읽는다. 항목 값이 `<…>` 자리표시자 그대로이거나 비어 있으면 "빈 항목"으로 본다.
-2. 주제(`$ARGUMENTS`)는 "주제" 항목에 바로 채운다.
-3. 빈 항목이 있으면 **사용자에게 항목별로 질문**한다(AskUserQuestion, 한 번에 최대 4문항씩). 순서: 목적 → 청중 → 발표 시간 → 핵심 메시지 → 톤 → 히어로 색상(HEX + 근거, "모름 — designer 제안" 선택지 포함) → 사용 가능한 브랜드 자산 → 꼭 넣을 자료/수치 → 금지 사항. 각 질문에는 brief.md의 예시를 참고한 선택지 2~3개를 주고, 사용자가 직접 입력할 수 있게 한다.
-4. 답을 `data/brief.md`에 반영한다(템플릿 구조 유지, 예시 주석은 지워도 됨). 답이 없는 선택 항목은 "없음"으로 적는다.
-5. 이전 덱 내용이 남아 있으면(`data/slides.json`이 샘플·이전 주제, `assets/images/`에 이전 이미지) 사용자에게 정리해도 되는지 확인한 뒤 진행한다.
-
-## 1~6. 위임
-각 단계는 Agent 도구로 해당 서브에이전트를 호출한다. 프롬프트에는 항상 (a) "작업 시작 시 data/brief.md를 먼저 읽을 것", (b) 이번 단계의 목표, (c) **이전 단계들의 `요청 사항:` 중 이 에이전트를 대상으로 한 것 전부**를 넣는다.
-
-| 단계 | 에이전트 | 목표 |
-|---|---|---|
-| 1 | `searcher` | brief.md "꼭 넣을 자료/수치" 검증 + 주제 근거 조사 → `data/research.md` (필요하면 표지·본문 이미지) |
-| 2 | `planner` | brief.md + research.md → `data/slides.json` (스키마 v2.0, 결론형 제목, 표 최대 3장, Appendix) |
-| 3 | `designer` | **배치 검토만**: type 분포·표 수·이미지 레이아웃 반복·시각 리듬 점검 → planner 재배치 요청 (theme.css 수정 없음) |
-| 3-1 | `planner` | 3단계 요청 사항이 있으면 반영 (없으면 건너뜀) |
-| 4 | `developer` | 새 타입·필드 요청이 있을 때만. 없으면 건너뛰고 "건너뜀"으로 기록 |
-| 5 | `designer` | 히어로 색 파생 절차(designer.md) — `--hero` 교체 · 대비 검사 · 팔레트/대비 표 보고. brief에 색이 없으면 후보 3개를 받아 사용자에게 고르게 한 뒤 다시 위임 |
-| 5-1 | `animator` | 전환·빌드 애니메이션 점검/보강 (최종 상태 = theme.css 레이아웃, 인쇄 시 해제) |
-
-- 단계가 끝날 때마다 보고에서 `요청 사항: <대상> — <내용>` 줄을 모두 모아 **요청 목록**(대상별)을 갱신한다. 다음 위임 때 해당 대상의 미처리 요청을 넘기고, 처리된 요청은 목록에서 지운다.
-- 대상이 이미 지난 단계의 에이전트면(예: designer가 planner에게) 그 에이전트를 다시 호출해 반영한 뒤 진행한다. 같은 요청으로 같은 에이전트를 3번 넘게 왕복하면 멈추고 사용자에게 판단을 묻는다.
-- 대상이 `메인 세션`이면서 스키마 변경 제안이면 사용자 승인 없이 반영하지 않는다.
-
-## 7. 검수 (메인 세션)
-1. `node scripts/validate-slides.mjs` · `bash scripts/check-topic-leftovers.sh` · `node --check src/app.js` · `node --check src/motion.js`
-2. 정적 서버(8000이 아닌 포트)로 띄워 헤드리스 캡처: 모든 장 넘침 없음, 16:9 유지(창 크기 변경), 콘솔 에러 없음.
-3. 캡처를 planner·designer에게 전달해 문제가 있으면 재위임한다(6단계 규칙 동일).
-4. 사용자에게 보고: 슬라이드 목록(id · type · 제목), 히어로 색 팔레트와 세 테마 대비 표, 검증 결과, 남은 요청 사항·TODO.
+## 단계
+1. `.claude/commands/storyboard.md`를 읽고 그 단계를 **그대로** 수행한다(report.md를 새로 만드는 것도 포함).
+   - `output/status.json`이 `ok: false`면 여기서 멈춘다(다음 단계 진행 금지). 마지막 메시지로 원인을 보고한다.
+2. `.claude/commands/build-deck.md`를 읽고 그 단계를 그대로 수행한다.
+   - `ok: false`면 여기서 멈춘다. → **초안 완성** 지점.
+3. `--research`가 있으면 `.claude/commands/research.md`의 단계를 수행한다. `ok: false`면 멈춘다.
+4. `--motion`이 있으면 `.claude/commands/motion.md`의 단계를 수행한다.
+5. 마지막 메시지: 마지막 단계의 `status.json` 요약(stage · ok · unverified · 오류 수), 실행한 단계 목록, `output/report.md`, 미리보기 방법(`npm run serve` → http://localhost:8000), PDF `output/deck.pdf`.
